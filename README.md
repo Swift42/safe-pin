@@ -117,7 +117,7 @@ npm ci
 
 What happens:
 
-1. For each package, the script runs `npm view <package> time --json` and finds the latest version published ≥ 7 days ago.
+1. For each package, the script runs `npm view <package> time --json` and finds the latest stable version (filtering out pre-releases like dev, alpha, beta, rc) published ≥ 7 days ago.
 2. Writes the exact version (no `^` or `~`) into `package.json` — into `dependencies` by default, or `devDependencies` with `--dev`.
 3. If the package already exists in the other section (dependencies vs devDependencies), removes it to avoid duplicates.
 
