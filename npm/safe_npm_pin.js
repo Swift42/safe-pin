@@ -37,6 +37,12 @@ function parseArgs() {
   return result;
 }
 
+function isStableVersion(version) {
+  // In semver, a pre-release is indicated by a hyphen after the version number
+  // e.g. 6.0.0-dev.20260401, 1.0.0-alpha.1, 1.0.0-beta.2, 1.0.0-rc.1
+  return !version.includes("-");
+}
+
 function getSafeVersion(packageName, minAgeDays) {
   const raw = execSync(`npm view ${packageName} time --json`, { encoding: "utf-8" });
   const times = JSON.parse(raw);
@@ -44,12 +50,13 @@ function getSafeVersion(packageName, minAgeDays) {
 
   const candidates = Object.entries(times)
     .filter(([v]) => v !== "created" && v !== "modified")
+    .filter(([v]) => isStableVersion(v))
     .filter(([, t]) => new Date(t) <= cutoff)
     .sort((a, b) => new Date(b[1]) - new Date(a[1]));
 
   if (candidates.length === 0) {
     console.error(
-      `ERROR: No version of '${packageName}' is older than ${minAgeDays} days. ` +
+      `ERROR: No stable version of '${packageName}' is older than ${minAgeDays} days. ` +
       `If this is a critical security patch, verify the release manually and pin it by hand.`
     );
     process.exit(1);

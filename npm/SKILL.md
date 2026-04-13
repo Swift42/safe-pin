@@ -34,7 +34,8 @@ The script accepts `--min-age <days>` (default: 7) and `--dev` / `-D` to write t
 ### What the script does
 
 1. Runs `npm view <package> time --json` to get publication dates for every version.
-2. Finds the latest version published ≥ 7 days ago.
+2. Filters out pre-release versions (any version containing a `-`, per semver: dev, alpha, beta, rc, etc.).
+3. Finds the latest stable version published ≥ 7 days ago.
 3. Writes the exact version (no `^` or `~`) into `dependencies` (or `devDependencies` with `--dev`).
 4. If the package already exists in the other section, removes it to avoid duplicates.
 5. If an existing `package.json` exists at the output path, merges into it.
