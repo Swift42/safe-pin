@@ -40,6 +40,23 @@ def is_stable_version(version: str) -> bool:
     return True
 
 
+def version_sort_key(version: str):
+    """Return a sortable key for a Composer/semver version string (highest = latest).
+
+    Strips a leading 'v' and splits into numeric/textual components so that
+    e.g. v3.5.0 sorts above v3.4.10 and above a backported v2.x release.
+    """
+    v = version.lstrip("vV")
+    parts = re.split(r"[.\-+]", v)
+    key = []
+    for p in parts:
+        if p.isdigit():
+            key.append((1, int(p), ""))
+        else:
+            key.append((0, 0, p))
+    return key
+
+
 def get_safe_version(package: str, min_age_days: int) -> tuple[str, str | None]:
     """Return (version, dist_shasum) for the latest stable Packagist version ≥ min_age_days old."""
     data = fetch_json(f"https://packagist.org/packages/{package}.json")
@@ -70,8 +87,9 @@ def get_safe_version(package: str, min_age_days: int) -> tuple[str, str | None]:
             f"If this is a critical security patch, verify the release manually and pin it by hand."
         )
 
-    # Sort by time descending, pick newest safe version
-    candidates.sort(key=lambda x: x[1], reverse=True)
+    # Sort by version number (highest = latest), not by publish date.
+    # This avoids picking a backported old major that was published more recently.
+    candidates.sort(key=lambda x: version_sort_key(x[0]), reverse=True)
     chosen = candidates[0]
     return chosen[0], chosen[2]
 
