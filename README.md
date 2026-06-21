@@ -87,7 +87,7 @@ python safe_pip_pin.py requests flask numpy -o requirements.txt
 
 What happens:
 
-1. For each package, the script queries the PyPI JSON API and finds the latest stable version (filtering out dev/alpha/beta/RC releases) published ≥ 7 days ago.
+1. For each package, the script queries the PyPI JSON API and finds the highest stable version (filtering out dev/alpha/beta/RC releases) that is ≥ 7 days old. Selection is by version number, not publish date, so a backported old major is never picked.
 2. Writes a `requirements.in` with the pinned top-level versions.
 3. Runs `pip-compile --generate-hashes` to resolve the full dependency tree and produce a `requirements.txt` with sha256 hashes for every package — including transitive dependencies.
 
@@ -117,7 +117,7 @@ npm ci
 
 What happens:
 
-1. For each package, the script runs `npm view <package> time --json` and finds the latest stable version (filtering out pre-releases like dev, alpha, beta, rc) published ≥ 7 days ago.
+1. For each package, the script runs npm view <package> time --json and finds the highest stable version (filtering out pre-releases like dev, alpha, beta, rc) that is ≥ 7 days old. Selection is by version number, not publish date — this matters for @types/* packages, where a backported older major may be published after a newer one.
 2. Writes the exact version (no `^` or `~`) into `package.json` — into `dependencies` by default, or `devDependencies` with `--dev`.
 3. If the package already exists in the other section (dependencies vs devDependencies), removes it to avoid duplicates.
 
@@ -143,7 +143,7 @@ composer install
 
 What happens:
 
-1. For each package, the script queries the Packagist JSON API and finds the latest stable version (filtering out dev/alpha/beta/RC releases) published ≥ 7 days ago.
+1. For each package, the script queries the Packagist JSON API and finds the highest stable version (filtering out dev/alpha/beta/RC releases) that is ≥ 7 days old. Selection is by version number, not publish date, so a backported old major is never picked.
 2. Writes the exact version into `composer.json`.
 3. If an existing `composer.json` exists at the output path, merges into it.
 
