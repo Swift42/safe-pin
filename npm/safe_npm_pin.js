@@ -43,6 +43,20 @@ function isStableVersion(version) {
   return !version.includes("-");
 }
 
+function compareSemver(a, b) {
+  // Compare two stable semver strings. Returns >0 if a is higher, <0 if lower.
+  // Build metadata (after +) is ignored; pre-releases are filtered out before this.
+  const clean = (v) => v.split("+")[0].split("-")[0];
+  const pa = clean(a).split(".").map((n) => parseInt(n, 10) || 0);
+  const pb = clean(b).split(".").map((n) => parseInt(n, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
 function getSafeVersion(packageName, minAgeDays) {
   const raw = execSync(`npm view ${packageName} time --json`, { encoding: "utf-8" });
   const times = JSON.parse(raw);
@@ -52,7 +66,9 @@ function getSafeVersion(packageName, minAgeDays) {
     .filter(([v]) => v !== "created" && v !== "modified")
     .filter(([v]) => isStableVersion(v))
     .filter(([, t]) => new Date(t) <= cutoff)
-    .sort((a, b) => new Date(b[1]) - new Date(a[1]));
+    // Sort by version number (highest = latest), not by publish date.
+    // This avoids picking a backported old major (e.g. @types/*) published more recently.
+    .sort((a, b) => compareSemver(b[0], a[0]));
 
   if (candidates.length === 0) {
     console.error(
