@@ -29,6 +29,8 @@ def fetch_json(url: str) -> dict:
 try:
     from packaging.version import Version as _PkgVersion
 
+    _HAS_PACKAGING = True
+
     def is_stable_version(version: str) -> bool:
         """Use PEP 440 parsing (via packaging) to detect pre-releases."""
         try:
@@ -36,6 +38,8 @@ try:
         except Exception:
             return _is_stable_fallback(version)
 except ImportError:
+    _HAS_PACKAGING = False
+
     def is_stable_version(version: str) -> bool:
         return _is_stable_fallback(version)
 
@@ -49,6 +53,28 @@ def _is_stable_fallback(version: str) -> bool:
     if re.search(r"(a|alpha|b|beta|rc|c)\d*(\.|$)", v):
         return False
     return True
+
+
+def version_sort_key(version: str):
+    """Return a sortable key for a version string (highest = latest).
+
+    Uses packaging.Version (PEP 440) when available; otherwise falls back to
+    a tuple of integer components, which is good enough for stable releases.
+    """
+    if _HAS_PACKAGING:
+        try:
+            return _PkgVersion(version)
+        except Exception:
+            pass
+    import re
+    parts = re.split(r"[.\-+]", version)
+    key = []
+    for p in parts:
+        if p.isdigit():
+            key.append((1, int(p), ""))
+        else:
+            key.append((0, 0, p))
+    return key
 
 
 def get_safe_version(package: str, min_age_days: int) -> str:
@@ -68,7 +94,9 @@ def get_safe_version(package: str, min_age_days: int) -> str:
             f"ERROR: No stable version of '{package}' is older than {min_age_days} days. "
             f"If this is a critical security patch, verify the release manually and pin it by hand."
         )
-    candidates.sort(key=lambda x: x[1], reverse=True)
+    # Sort by version number (highest = latest), not by publish date.
+    # This avoids picking a backported old major that was published more recently.
+    candidates.sort(key=lambda x: version_sort_key(x[0]), reverse=True)
     return candidates[0][0]
 
 
